@@ -1,10 +1,22 @@
 const { test } = require('node:test');
-const assert = require('node:assert');
+const assert = require('node:assert/strict');
 const app = require('../src/app');
+const { request, startServer } = require('./helpers/http');
 
-// Teste de fumaça do seed: garante que o app Express foi exportado.
-// Novos testes serão adicionados durante os Steps 2, 6 e 7 com auxílio do Copilot.
 test('o app backend é exportado', () => {
   assert.ok(app, 'o app deve estar definido');
-  assert.strictEqual(typeof app, 'function', 'o app Express deve ser uma função');
+  assert.equal(typeof app, 'function', 'o app Express deve ser uma função');
+});
+
+test('retorna o status de saúde da aplicação', async () => {
+  const server = await startServer(app);
+
+  try {
+    const response = await request(server, { method: 'GET', path: '/health' });
+
+    assert.equal(response.statusCode, 200);
+    assert.deepEqual(JSON.parse(response.body), { status: 'ok' });
+  } finally {
+    await server.close();
+  }
 });
