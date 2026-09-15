@@ -46,6 +46,26 @@ test('rejeita upload sem arquivo', async () => {
   }
 });
 
+test('rejeita upload sem usuário antes de gravar no storage', async () => {
+  const server = await startServer(app);
+  const filesBefore = await listStorageFiles();
+
+  try {
+    const response = await request(server, {
+      method: 'POST',
+      path: '/upload',
+      body: createMultipartBody('orphan.txt', 'não deve ser gravado'),
+    });
+
+    assert.equal(response.statusCode, 400);
+    assert.equal(JSON.parse(response.body).error.code, 'INVALID_OWNER');
+    assert.deepEqual(await listStorageFiles(), filesBefore);
+  } finally {
+    await server.close();
+    await removeNewStorageFiles(filesBefore);
+  }
+});
+
 test('exige um usuário para listar documentos', async () => {
   const server = await startServer(app);
   try {
@@ -79,6 +99,24 @@ test('retorna 404 para documento inexistente', async () => {
     const response = await request(server, { method: 'GET', path: '/documents/00000000-0000-0000-0000-000000000000/download', headers: { 'x-user-id': 'test-user' } });
     assert.equal(response.statusCode, 404);
     assert.equal(JSON.parse(response.body).error.code, 'DOCUMENT_NOT_FOUND');
+  } finally {
+    await server.close();
+  }
+});
+
+test('não expõe detalhes internos em erros inesperados', async () => {
+  const server = await startServer(app);
+
+  try {
+    const response = await request(server, {
+      method: 'GET',
+      path: '/documents/not-a-valid-id/download',
+      headers: { 'x-user-id': 'test-user' },
+    });
+
+    assert.equal(response.statusCode, 400);
+    assert.equal(JSON.parse(response.body).error.code, 'INVALID_DOCUMENT_ID');
+    assert.doesNotMatch(response.body, /storage|node_modules|backend/i);
   } finally {
     await server.close();
   }

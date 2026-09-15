@@ -29,9 +29,28 @@ app.use((error, req, res, next) => {
     return next(error);
   }
 
-  const status = error.status || (error.code === 'LIMIT_FILE_SIZE' ? 413 : 500);
-  const code = error.code === 'LIMIT_FILE_SIZE' ? 'FILE_TOO_LARGE' : error.code || 'INTERNAL_ERROR';
-  res.status(status).json({ error: { code, message: error.message } });
+  const knownErrors = {
+    FILE_TOO_LARGE: { status: 413, message: 'Arquivo excede o limite permitido.' },
+    FILE_TYPE_NOT_ALLOWED: { status: 415, message: 'Tipo de arquivo não permitido.' },
+    INVALID_OWNER: { status: 400, message: 'Identificador do usuário é obrigatório.' },
+    FILE_REQUIRED: { status: 400, message: 'Arquivo é obrigatório.' },
+    INVALID_DOCUMENT_ID: { status: 400, message: 'Identificador do documento é inválido.' },
+    DOCUMENT_NOT_FOUND: { status: 404, message: 'Documento não encontrado.' },
+    DOCUMENT_ACCESS_DENIED: { status: 403, message: 'Acesso ao documento negado.' },
+    DOCUMENT_FILE_NOT_FOUND: { status: 404, message: 'Arquivo do documento não encontrado.' },
+    STORAGE_READ_FAILED: { status: 500, message: 'Não foi possível ler o documento.' },
+  };
+  const code = error.code === 'LIMIT_FILE_SIZE' ? 'FILE_TOO_LARGE' : error.code;
+  const knownError = knownErrors[code];
+
+  if (!knownError) {
+    console.error(error);
+    return res.status(500).json({
+      error: { code: 'INTERNAL_ERROR', message: 'Ocorreu um erro interno.' },
+    });
+  }
+
+  res.status(knownError.status).json({ error: { code, message: knownError.message } });
 });
 
 if (require.main === module) {

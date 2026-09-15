@@ -15,6 +15,9 @@ export const listDocuments = async (owner) => {
   const { payload } = await apiRequest('/documents', {
     headers: { 'x-user-id': owner },
   });
+  if (!Array.isArray(payload?.documents)) {
+    throw new Error('Resposta inválida ao listar documentos.');
+  }
   return payload.documents;
 };
 
@@ -26,6 +29,9 @@ export const uploadDocument = async (file, owner) => {
     headers: { 'x-user-id': owner },
     body: formData,
   });
+  if (!payload?.document?.id) {
+    throw new Error('Resposta inválida ao enviar documento.');
+  }
   return payload.document;
 };
 

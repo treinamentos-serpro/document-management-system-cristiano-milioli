@@ -10,9 +10,11 @@ export default function UploadComponent({ isLoading, onUpload }) {
       return;
     }
 
-    await onUpload(selectedFile);
-    setSelectedFile(null);
-    formRef.current?.reset();
+    const uploaded = await onUpload(selectedFile);
+    if (uploaded) {
+      setSelectedFile(null);
+      formRef.current?.reset();
+    }
   };
 
   return (

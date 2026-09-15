@@ -14,7 +14,7 @@ class DocumentService {
 
     return this.documentRepository.save({
       id: randomUUID(),
-      originalName: path.basename(file.originalname),
+      originalName: this.normalizeOriginalName(file.originalname),
       size: file.size,
       uploadedAt: new Date().toISOString(),
       owner: owner.trim(),
@@ -51,9 +51,20 @@ class DocumentService {
   }
 
   ensureOwner(owner) {
-    if (!owner || typeof owner !== 'string' || !owner.trim()) {
+    const normalizedOwner = typeof owner === 'string' ? owner.trim() : '';
+    if (!normalizedOwner || normalizedOwner.length > 100 || /[\u0000-\u001f\u007f]/.test(normalizedOwner)) {
       throw this.createError('INVALID_OWNER', 'Identificador do usuário é obrigatório.', 400);
     }
+  }
+
+  normalizeOriginalName(originalName) {
+    const normalizedName = path.basename(String(originalName || 'documento'))
+      .replace(/[\\/]/g, '_')
+      .replace(/[\u0000-\u001f\u007f]/g, '_')
+      .trim()
+      .slice(0, 255);
+
+    return normalizedName || 'documento';
   }
 
   createError(code, message, status) {
