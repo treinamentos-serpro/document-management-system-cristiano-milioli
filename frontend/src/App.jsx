@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import DocumentList from './components/DocumentList';
 import UploadComponent from './components/UploadComponent';
 import { listDocuments, uploadDocument } from './services/documentService';
@@ -9,11 +9,15 @@ export default function App() {
   const [owner, setOwner] = useState(initialOwner);
   const [documents, setDocuments] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const requestVersion = useRef(0);
 
   const refreshDocuments = async (currentOwner = owner) => {
-    if (!currentOwner.trim()) {
+    const normalizedOwner = currentOwner.trim();
+    const version = ++requestVersion.current;
+    if (!normalizedOwner) {
       setDocuments([]);
       return;
     }
@@ -21,11 +25,18 @@ export default function App() {
     setIsLoading(true);
     setError('');
     try {
-      setDocuments(await listDocuments(currentOwner.trim()));
+      const nextDocuments = await listDocuments(normalizedOwner);
+      if (version === requestVersion.current) {
+        setDocuments(nextDocuments);
+      }
     } catch (requestError) {
-      setError(requestError.message);
+      if (version === requestVersion.current) {
+        setError(requestError.message);
+      }
     } finally {
-      setIsLoading(false);
+      if (version === requestVersion.current) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -39,17 +50,19 @@ export default function App() {
       return;
     }
 
-    setIsLoading(true);
+    setIsUploading(true);
     setError('');
     setMessage('');
     try {
       await uploadDocument(file, owner.trim());
       setMessage('Documento enviado com sucesso.');
       await refreshDocuments();
+      return true;
     } catch (requestError) {
       setError(requestError.message);
+      return false;
     } finally {
-      setIsLoading(false);
+      setIsUploading(false);
     }
   };
 
@@ -68,7 +81,7 @@ export default function App() {
           <button type="button" className="quiet-button" onClick={() => refreshDocuments()} disabled={isLoading}>Atualizar lista</button>
         </div>
 
-        <UploadComponent isLoading={isLoading} onUpload={handleUpload} />
+        <UploadComponent isLoading={isUploading} onUpload={handleUpload} />
 
         {message && <p className="status success" role="status">{message}</p>}
         {error && <p className="status failure" role="alert">{error}</p>}
