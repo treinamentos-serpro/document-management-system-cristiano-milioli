@@ -2,21 +2,17 @@ const path = require('node:path');
 const { randomUUID } = require('node:crypto');
 
 class DocumentService {
-  constructor(documentRepository, fileRepository) {
+  constructor(documentRepository) {
     this.documentRepository = documentRepository;
-    this.fileRepository = fileRepository;
   }
 
   upload(file, owner) {
-    if (!owner || typeof owner !== 'string' || !owner.trim()) {
-      throw this.error('INVALID_OWNER', 'Identificador do usuário é obrigatório.', 400);
-    }
-
+    this.ensureOwner(owner);
     if (!file) {
-      throw this.error('FILE_REQUIRED', 'Arquivo é obrigatório.', 400);
+      throw this.createError('FILE_REQUIRED', 'Arquivo é obrigatório.', 400);
     }
 
-    const document = {
+    return this.documentRepository.save({
       id: randomUUID(),
       originalName: path.basename(file.originalname),
       size: file.size,
@@ -24,9 +20,7 @@ class DocumentService {
       owner: owner.trim(),
       storagePath: file.path,
       mimeType: file.mimetype || 'application/octet-stream',
-    };
-
-    return this.documentRepository.save(document);
+    });
   }
 
   list(owner) {
@@ -37,16 +31,15 @@ class DocumentService {
   findForDownload(id, owner) {
     this.ensureOwner(owner);
     if (!id || !/^[0-9a-f-]{36}$/i.test(id)) {
-      throw this.error('INVALID_DOCUMENT_ID', 'Identificador do documento é inválido.', 400);
+      throw this.createError('INVALID_DOCUMENT_ID', 'Identificador do documento é inválido.', 400);
     }
 
     const document = this.documentRepository.findById(id);
     if (!document) {
-      throw this.error('DOCUMENT_NOT_FOUND', 'Documento não encontrado.', 404);
+      throw this.createError('DOCUMENT_NOT_FOUND', 'Documento não encontrado.', 404);
     }
-
     if (document.owner !== owner.trim()) {
-      throw this.error('DOCUMENT_ACCESS_DENIED', 'Acesso ao documento negado.', 403);
+      throw this.createError('DOCUMENT_ACCESS_DENIED', 'Acesso ao documento negado.', 403);
     }
 
     return document;
@@ -59,11 +52,11 @@ class DocumentService {
 
   ensureOwner(owner) {
     if (!owner || typeof owner !== 'string' || !owner.trim()) {
-      throw this.error('INVALID_OWNER', 'Identificador do usuário é obrigatório.', 400);
+      throw this.createError('INVALID_OWNER', 'Identificador do usuário é obrigatório.', 400);
     }
   }
 
-  error(code, message, status) {
+  createError(code, message, status) {
     const error = new Error(message);
     error.code = code;
     error.status = status;

@@ -1,13 +1,12 @@
-const path = require('node:path');
-const fs = require('node:fs');
-const multer = require('multer');
 const express = require('express');
+const fs = require('node:fs');
+const path = require('node:path');
 const { randomUUID } = require('node:crypto');
+const multer = require('multer');
 
-const DocumentRepository = require('../repositories/documentRepository');
-const FileRepository = require('../repositories/fileRepository');
-const DocumentService = require('../services/documentService');
-const DocumentController = require('../controllers/documentController');
+const DocumentRepository = require('../repositories/document.repository');
+const DocumentService = require('../services/document.service');
+const DocumentController = require('../controllers/document.controller');
 
 const storageDirectory = process.env.STORAGE_DIR || path.resolve(__dirname, '../../storage');
 fs.mkdirSync(storageDirectory, { recursive: true });
@@ -24,7 +23,7 @@ const upload = multer({
   limits: { fileSize: Number(process.env.MAX_FILE_SIZE || 10 * 1024 * 1024) },
 });
 
-const documentService = new DocumentService(new DocumentRepository(), new FileRepository());
+const documentService = new DocumentService(new DocumentRepository());
 const documentController = new DocumentController(documentService);
 const router = express.Router();
 

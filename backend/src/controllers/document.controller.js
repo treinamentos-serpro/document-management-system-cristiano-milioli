@@ -14,8 +14,7 @@ class DocumentController {
 
   list = (req, res, next) => {
     try {
-      const documents = this.documentService.list(req.header('x-user-id'));
-      res.json({ documents });
+      res.json({ documents: this.documentService.list(req.header('x-user-id')) });
     } catch (error) {
       next(error);
     }
